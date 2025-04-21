@@ -2,26 +2,21 @@
 
 import 'dart:convert';
 
+import 'package:configclient/login.dart';
 import 'package:flutter/material.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:http/http.dart' as http;
 
 String host = "192.168.2.83";
-late User user;
-String sessionId = "";
-
-var headers = <String, String>{
-  "Cookie": "sessionId=$sessionId"
-};
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  runApp(MyApp());
+  runApp(ConfigClient());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class ConfigClient extends StatelessWidget {
+  const ConfigClient({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +43,17 @@ class MyApp extends StatelessWidget {
             colorScheme: darkColorScheme,
             useMaterial3: true,
           ),
-          home: ConfigSelect(),
+          home: LoginView(
+            onLogin: (context) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ConfigSelect() 
+                )
+              );
+            },
+            host: host,
+          ),
         );
       },
     );
@@ -66,7 +71,7 @@ class _ConfigSelectState extends State<ConfigSelect> {
   List<AllConfig> configs = [];
 
   _ConfigSelectState() {
-    setup();
+    fetch();
   }
 
   List<Widget> configsToCards() {
@@ -136,50 +141,6 @@ class _ConfigSelectState extends State<ConfigSelect> {
         ),
       ),
     );
-  }
-
-  void setup() async {
-    try {
-      while(sessionId.isEmpty){
-        var res = await http.post(Uri.parse('http://$host/api/identity/login'), headers: {
-          "Content-Type": "application/json; charset=UTF-8"
-        }, body: jsonEncode({
-          "name": "Admin",
-          "password": "adminPassword"
-        }));
-        var cookie = res.headers['set-cookie'];
-        sessionId = cookie?.split('sessionId=')[1].split(';')[0] ?? "";
-        await Future.delayed(Duration(seconds: 1));
-      }
-
-      var userRes = await http.get(Uri.parse("http://$host/api/identity/login/valid"), headers: headers);
-      if(userRes.statusCode != 200){
-        print(userRes.statusCode);
-        return;
-      }
-      user = User.fromJson(jsonDecode(userRes.body));
-    }
-    catch (e) {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text("Login Error"),
-            content: Text("Unable to login: $e"),
-            actions: [
-              FilledButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: Text("Ok")
-              )
-            ],
-          );
-        }
-      );
-    }
-
-    fetch();
   }
 
   void fetch() async {
@@ -380,7 +341,23 @@ class NewConfigView extends StatelessWidget {
                       })
                     );
                     if(res.statusCode != 200) {
-                      print(res.statusCode);
+                      showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: Text("Creating Config Failed"),
+                            content: Text("It seems like we couldn't create the config. Please try again later."),
+                            actions: [
+                              FilledButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                child: Text("Ok")
+                              )
+                            ],
+                          );
+                        }
+                      );
                       return;
                     }
                     var newId = jsonDecode(res.body)["id"];
@@ -388,8 +365,23 @@ class NewConfigView extends StatelessWidget {
                       AllConfig(id: newId, name: nameController.text)
                     );
                   } catch (e) {
-                    print("Error on Config creation:");
-                    print(e);
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: Text("Creating Config Failed"),
+                          content: Text("It seems like we couldn't create the config. Please contact your administrator."),
+                          actions: [
+                            FilledButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              child: Text("Ok")
+                            )
+                          ],
+                        );
+                      }
+                    );
                   }
                 },
                 child: const Text("Create Config"),
@@ -428,7 +420,23 @@ class _ConfigViewState extends State<ConfigView> {
           widget.config = Config.fromJson(configRes);
         });
       } else {
-        print(res.statusCode);
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text("Getting Config Failed"),
+              content: Text("It seems like we couldn't fetch your config. Please contact your administrator."),
+              actions: [
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text("Ok")
+                )
+              ],
+            );
+          }
+        );
       }
     }));
 
@@ -485,27 +493,6 @@ class TextDivider extends StatelessWidget {
         ),
       ]
     );
-  }
-}
-
-class User {
-  final String id;
-  final String name;
-
-  User({required this.id, required this.name});
-
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['id'],
-      name: json['name'],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-    };
   }
 }
 
