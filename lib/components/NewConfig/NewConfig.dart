@@ -27,7 +27,7 @@ class _NewConfigViewState extends State<NewConfigView> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surfaceBright,
-        title: const Text("Start a new Chat"),
+        title: const Text("Create a new Config"),
       ),
       body: Form(
         key: formKey,
