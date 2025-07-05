@@ -5,15 +5,22 @@ import 'package:configclient/login.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-class NewConfigView extends StatelessWidget {
+class NewConfigView extends StatefulWidget {
+  final String host;
+
+  const NewConfigView({super.key, required this.host});
+
+  @override
+  State<NewConfigView> createState() => _NewConfigViewState();
+}
+
+class _NewConfigViewState extends State<NewConfigView> {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
   final modelController = TextEditingController();
   final messageController = TextEditingController();
-  
-  final String host;
 
-  NewConfigView({super.key, required this.host});
+  bool useNotes = false;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +35,7 @@ class NewConfigView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.only(left: 24, right: 24),
               child: Column(
                 children: [
                   Padding(
@@ -56,6 +63,16 @@ class NewConfigView extends StatelessWidget {
                         return null;
                       },
                     ),
+                  ),
+                  SwitchListTile(
+                    value: useNotes,
+                    onChanged: (value) {
+                      setState(() {
+                        useNotes = value;
+                      });
+                    },
+                    title: Text("Use Notes"),
+                    contentPadding: EdgeInsets.all(0),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
@@ -86,12 +103,13 @@ class NewConfigView extends StatelessWidget {
                   }
                   try {
                     var res = await http.post(
-                      Uri.parse("http://$host/api/ollamaconfig/config"),
+                      Uri.parse("http://${widget.host}/api/ollamaconfig/config"),
                       headers: headers,
                       body: jsonEncode({
                         "name": nameController.text,
                         "model": modelController.text,
-                        "message": messageController.text
+                        "message": messageController.text,
+                        "useNotes": useNotes
                       })
                     );
                     if(res.statusCode != 200) {
