@@ -45,8 +45,8 @@ class ConfigClient extends StatelessWidget {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ConfigSelect(host: host) 
-                )
+                  builder: (context) => ConfigSelect(host: host),
+                ),
               );
             },
             host: host,
