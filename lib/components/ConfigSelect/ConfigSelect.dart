@@ -39,17 +39,18 @@ class _ConfigSelectState extends State<ConfigSelect> {
             AllConfig? editedConfig = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ConfigView(id: config.id, host: widget.host)
-              )
+                builder:
+                    (context) => ConfigView(id: config.id, host: widget.host),
+              ),
             );
-            if(editedConfig != null) {
+            if (editedConfig != null) {
               setState(() {
                 configs[index] = editedConfig;
               });
             }
           },
           host: widget.host,
-        )
+        ),
       );
     });
     return cards;
@@ -61,70 +62,140 @@ class _ConfigSelectState extends State<ConfigSelect> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surfaceBright,
         title: Text("Configs"),
-        actions: [
-          Padding(
-            padding: EdgeInsets.only(right: 24.0),
-            child: IconButton(
-              icon: Icon(sessionId.isEmpty ? Icons.circle_outlined : Icons.add),
-              onPressed: sessionId.isEmpty ? null : () async {
-                AllConfig? newConfig = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => NewConfigView(host: widget.host)
-                  )
-                );
-                if(newConfig != null) {
-                  setState(() {
-                    configs.add(newConfig);
-                  });
-                }
-              },
-            )
-          ),
-        ],
+        actions:
+            sessionId.isEmpty
+                ? [
+                  Padding(
+                    padding: EdgeInsets.only(right: 8.0),
+                    child: Icon(Icons.circle_outlined),
+                  ),
+                ]
+                : [
+                  Padding(
+                    padding: EdgeInsets.only(right: 8.0),
+                    child: IconButton(
+                      icon: Icon(Icons.person_outlined),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: Text("Logout"),
+                              content: Text(
+                                "You are currently logged in as ${user.name}. Do you want to logout?",
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
+                                  child: Text("Cancel"),
+                                ),
+                                FilledButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    logout();
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => LoginView(
+                                              host: widget.host,
+                                              onLogin: (BuildContext context) {
+                                                Navigator.pushReplacement(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder:
+                                                        (context) =>
+                                                            ConfigSelect(
+                                                              host: widget.host,
+                                                            ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  child: Text("Logout"),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
       ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.only(left: 8.0, right: 8.0),
-          child: Column(
-            children: configsToCards(),
-          ),
+          child: Column(children: configsToCards()),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        child: Icon(sessionId.isEmpty ? Icons.circle_outlined : Icons.add),
+        onPressed:
+            sessionId.isEmpty
+                ? null
+                : () async {
+                  AllConfig? newConfig = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => NewConfigView(host: widget.host),
+                    ),
+                  );
+                  if (newConfig != null) {
+                    setState(() {
+                      configs.add(newConfig);
+                    });
+                  }
+                },
       ),
     );
   }
 
   void fetch(String host) async {
     List<Future> tasks = [];
-    
-    tasks.add(http.get(Uri.parse("http://$host/api/ollamaconfig/config"), headers: headers).then((res) {
-      if(res.statusCode == 200) {
-        var configsRes = jsonDecode(res.body)["configs"];
-        setState(() {
-          for(var config in configsRes){
-            configs.add(AllConfig.fromJson(config));
-          }
-        });
-      } else {
-        showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: Text("Login Error"),
-              content: Text("Unable to get Configs with Status: ${res.statusCode}"),
-              actions: [
-                FilledButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text("Ok")
-                )
-              ],
-            );
-          }
-        );
-      }
-    }));
+
+    tasks.add(
+      http
+          .get(
+            Uri.parse("http://$host/api/ollamaconfig/config"),
+            headers: headers,
+          )
+          .then((res) {
+            if (res.statusCode == 200) {
+              var configsRes = jsonDecode(res.body)["configs"];
+              setState(() {
+                for (var config in configsRes) {
+                  configs.add(AllConfig.fromJson(config));
+                }
+              });
+            } else {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text("Login Error"),
+                    content: Text(
+                      "Unable to get Configs with Status: ${res.statusCode}",
+                    ),
+                    actions: [
+                      FilledButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        child: Text("Ok"),
+                      ),
+                    ],
+                  );
+                },
+              );
+            }
+          }),
+    );
 
     await Future.wait(tasks);
   }
